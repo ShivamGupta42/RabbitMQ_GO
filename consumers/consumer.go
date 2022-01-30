@@ -1,9 +1,10 @@
-package producer
+package consumers
 
 import (
-	"github.com/streadway/amqp"
 	"log"
 	"sync"
+
+	"github.com/streadway/amqp"
 )
 
 func failOnError(err error, msg string) {
@@ -12,8 +13,9 @@ func failOnError(err error, msg string) {
 	}
 }
 
-func Produce(wg *sync.WaitGroup) {
+func Consume(wg *sync.WaitGroup) {
 	defer wg.Done()
+
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
@@ -32,16 +34,25 @@ func Produce(wg *sync.WaitGroup) {
 	)
 	failOnError(err, "Failed to declare a queue")
 
-	body := "Hello World!"
-	err = ch.Publish(
-		"",     // exchange
-		q.Name, // routing key
-		false,  // mandatory
-		false,  // immediate
-		amqp.Publishing{
-			ContentType: "text/plain",
-			Body:        []byte(body),
-		})
-	failOnError(err, "Failed to publish a message")
-	log.Printf(" [x] Sent %s\n", body)
+	msgs, err := ch.Consume(
+		q.Name, // queue
+		"",     // consumer
+		true,   // auto-ack
+		false,  // exclusive
+		false,  // no-local
+		false,  // no-wait
+		nil,    // args
+	)
+	failOnError(err, "Failed to register a consumer")
+
+	var conWg sync.WaitGroup
+	conWg.Add(1)
+	go func() {
+		for d := range msgs {
+			log.Printf("\n\nReceived a message: %s", d.Body)
+		}
+		conWg.Done()
+	}()
+
+	conWg.Wait()
 }
