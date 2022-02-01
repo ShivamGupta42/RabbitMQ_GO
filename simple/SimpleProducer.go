@@ -1,16 +1,10 @@
-package producer
+package simple
 
 import (
 	"github.com/streadway/amqp"
 	"log"
 	"sync"
 )
-
-func failOnError(err error, msg string) {
-	if err != nil {
-		log.Panicf("%s: %s", msg, err)
-	}
-}
 
 func Produce(wg *sync.WaitGroup) {
 	defer wg.Done()
