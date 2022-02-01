@@ -8,6 +8,10 @@ import (
 )
 
 func main() {
+
+	/*server heartbeat interval of 10
+	seconds and sets the handshake deadline to 30 seconds
+	*/
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()

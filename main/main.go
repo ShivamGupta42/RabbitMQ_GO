@@ -1,15 +1,17 @@
 package main
 
-import (
-	"RabbitMQ/simple"
-	"sync"
-)
+import "RabbitMQ/pubsub"
 
 func main() {
-	var wg sync.WaitGroup
+	/*
+		var wg sync.WaitGroup
 
-	wg.Add(2)
-	go simple.Produce(&wg)
-	go simple.Consume(&wg)
-	wg.Wait()
+		wg.Add(2)
+		go simple.Produce(&wg)
+		go simple.Consume(&wg)
+		wg.Wait()
+	*/
+
+	go pubsub.Publish()
+
 }

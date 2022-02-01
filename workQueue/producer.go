@@ -1,6 +1,7 @@
 package workQueue
 
 import (
+	"fmt"
 	"github.com/streadway/amqp"
 	"log"
 	"os"
@@ -13,7 +14,7 @@ func failOnError(err error, msg string) {
 	}
 }
 
-func main() {
+func produce() {
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
@@ -32,6 +33,26 @@ func main() {
 	)
 	failOnError(err, "Failed to declare a queue")
 
+	getServerConfirmations(&ch)
+	//setting server confirmations for messages delivered
+	ch.Confirm(false)
+
+	ack := make(chan uint64)
+	nack := make(chan uint64)
+	ch.NotifyConfirm(ack, nack)
+
+	go func() {
+		for msg := range ack {
+			fmt.Println(msg)
+		}
+	}()
+
+	go func() {
+		for msg := range nack {
+			fmt.Println(msg)
+		}
+	}()
+
 	body := bodyFrom(os.Args)
 	err = ch.Publish(
 		"",     // exchange
@@ -46,6 +67,10 @@ func main() {
 		})
 	failOnError(err, "Failed to publish a message")
 	log.Printf(" [x] Sent %s", body)
+}
+
+func getServerConfirmations(i **amqp.Channel) {
+
 }
 
 func bodyFrom(args []string) string {
