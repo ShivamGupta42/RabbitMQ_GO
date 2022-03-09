@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"github.com/streadway/amqp"
 	"log"
+	"sync"
 	"time"
 )
 
-func main() {
-
+func Consume(wg *sync.WaitGroup) {
+	defer wg.Done()
 	/*server heartbeat interval of 10
 	seconds and sets the handshake deadline to 30 seconds
 	*/
@@ -48,21 +49,25 @@ func main() {
 		false,  // no-wait
 		nil,    // args
 	)
+
 	failOnError(err, "Failed to register a consumer")
 
-	forever := make(chan bool)
+	var localWg sync.WaitGroup
+	localWg.Add(1)
 
 	go func() {
-		for d := range msgs {
+		defer localWg.Done()
+		for i := 0; i < 5; i++ {
+			d := <-msgs
 			log.Printf("Received a message: %s", d.Body)
 			dotCount := bytes.Count(d.Body, []byte("."))
 			t := time.Duration(dotCount)
 			time.Sleep(t * time.Second)
-			log.Printf("Done")
 			d.Ack(false) //For batch processing, call this method with multiple true
 		}
+
 	}()
 
-	log.Printf(" [*] Waiting for messages. To exit press CTRL+C")
-	<-forever
+	localWg.Wait()
+	log.Printf("Exiting consumer")
 }

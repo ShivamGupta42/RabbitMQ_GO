@@ -48,9 +48,8 @@ func Consume(wg *sync.WaitGroup) {
 	var conWg sync.WaitGroup
 	conWg.Add(1)
 	go func() {
-		for d := range msgs {
-			log.Printf("\n\nReceived a message: %s", d.Body)
-		}
+		d := <-msgs
+		log.Printf("\n\nReceived a message: %s", d.Body)
 		conWg.Done()
 	}()
 

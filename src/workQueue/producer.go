@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 )
 
 func failOnError(err error, msg string) {
@@ -14,7 +15,9 @@ func failOnError(err error, msg string) {
 	}
 }
 
-func produce() {
+func Produce(wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
@@ -53,24 +56,42 @@ func produce() {
 		}
 	}()
 
-	body := bodyFrom(os.Args)
-	err = ch.Publish(
-		"",     // exchange
-		q.Name, // routing key
-		false,  // mandatory
-		false,
-		//ensuring msgs are persistent
-		amqp.Publishing{
-			DeliveryMode: amqp.Persistent,
-			ContentType:  "text/plain",
-			Body:         []byte(body),
-		})
-	failOnError(err, "Failed to publish a message")
-	log.Printf(" [x] Sent %s", body)
+	//body := bodyFrom(os.Args)
+
+	for {
+
+		body := bodyFromUserInput()
+		if strings.TrimSpace(body) == "quit()" {
+			break
+		}
+
+		err = ch.Publish(
+			"",     // exchange
+			q.Name, // routing key
+			false,  // mandatory
+			false,
+			//ensuring msgs are persistent
+			amqp.Publishing{
+				DeliveryMode: amqp.Persistent,
+				ContentType:  "text/plain",
+				Body:         []byte(body),
+			})
+
+		failOnError(err, "Failed to publish a message")
+		log.Printf(" [x] Sent %s", body)
+	}
+
+	log.Printf("\n\nProducer exiting\n")
 }
 
 func getServerConfirmations(i **amqp.Channel) {
 
+}
+
+func bodyFromUserInput() string {
+	var command string
+	fmt.Scanf("%s", &command)
+	return command
 }
 
 func bodyFrom(args []string) string {
